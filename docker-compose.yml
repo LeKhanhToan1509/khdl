@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: 123456
+      MONGO_INITDB_DATABASE: jobdata
+    networks:
+      - job-analytics
+
+  # Backend service (optional)
+  backend:
+    build: 
+      context: ./be
+      dockerfile: Dockerfile
+    container_name: job-analytics-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    depends_on:
+      - mongodb
+    environment:
+      - MONGODB_URI=mongodb://root:123456@mongodb:27017/
+    networks:
+      - job-analytics
+    profiles:
+      - production
+
+  # Frontend service (optional)  
+  frontend:
+    build:
+      context: ./fe
+      dockerfile: Dockerfile
+    container_name: job-analytics-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    environment:
+      - REACT_APP_API_URL=http://localhost:8000/api
+    networks:
+      - job-analytics
+    profiles:
+      - production
+
+volumes:
+  mongo-data:
+    driver: local
+
+networks:
+  job-analytics:
+    driver: bridge
